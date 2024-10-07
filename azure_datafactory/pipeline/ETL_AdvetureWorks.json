@@ -112,60 +112,6 @@
 						}
 					]
 				}
-			},
-			{
-				"name": "Bronze to SIlver",
-				"type": "DatabricksNotebook",
-				"dependsOn": [
-					{
-						"activity": "For Each Schema Table",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"notebookPath": "/Users/felipeparfitt@gmail.com/BRONZE_TO_SILVER"
-				},
-				"linkedServiceName": {
-					"referenceName": "LS_ADB_advetureWorks",
-					"type": "LinkedServiceReference"
-				}
-			},
-			{
-				"name": "Silver to Gold",
-				"type": "DatabricksNotebook",
-				"dependsOn": [
-					{
-						"activity": "Bronze to SIlver",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"notebookPath": "/Users/felipeparfitt@gmail.com/SILVER_TO_GOLD"
-				},
-				"linkedServiceName": {
-					"referenceName": "LS_ADB_advetureWorks",
-					"type": "LinkedServiceReference"
-				}
 			}
 		],
 		"annotations": [],
