@@ -1,0 +1,28 @@
+{
+	"name": "LS_SQLServer_AdvetureWorks",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"server": "DESKTOP-5NU4TTN\\SQLEXPRESS",
+			"database": "AdventureWorksLT2017",
+			"encrypt": "optional",
+			"trustServerCertificate": false,
+			"authenticationType": "SQL",
+			"userName": "mrk",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "LS_AKV_AdvetureWorks",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "SqlServerPassword"
+			}
+		},
+		"connectVia": {
+			"referenceName": "SelfHostedIRTSqlServer",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

@@ -1,0 +1,6 @@
+{
+	"name": "SelfHostedIRTSqlServer",
+	"properties": {
+		"type": "SelfHosted"
+	}
+}

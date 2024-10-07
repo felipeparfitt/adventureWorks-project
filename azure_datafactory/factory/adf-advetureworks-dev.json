@@ -1,0 +1,9 @@
+{
+	"name": "adf-advetureworks-dev",
+	"location": "westus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "8da2873a-d70f-4d6e-9934-b6dc760d09c4",
+		"tenantId": "dc5211a7-f97c-4edb-b765-d6daa2e27ee4"
+	}
+}

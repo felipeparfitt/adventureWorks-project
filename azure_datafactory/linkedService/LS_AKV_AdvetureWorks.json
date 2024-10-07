@@ -1,0 +1,11 @@
+{
+	"name": "LS_AKV_AdvetureWorks",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://kv-advetureworkss-dev.vault.azure.net/"
+		}
+	}
+}
