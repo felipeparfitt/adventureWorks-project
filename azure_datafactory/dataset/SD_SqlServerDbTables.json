@@ -1,5 +1,5 @@
 {
-	"name": "SqlServerDbTables",
+	"name": "SD_SqlServerDbTables",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "LS_SQLServer_AdvetureWorks",

@@ -3,51 +3,19 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Look for all tables",
-				"type": "Lookup",
-				"dependsOn": [],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"source": {
-						"type": "SqlServerSource",
-						"sqlReaderQuery": "SELECT\n\ts.name AS schema_name,\n\tt.name As table_name\nFROM sys.tables t\nINNER JOIN sys.schemas s\nON T.schema_id = s.schema_id\nWHERE s.name = 'SalesLT'",
-						"queryTimeout": "02:00:00",
-						"partitionOption": "None"
-					},
-					"dataset": {
-						"referenceName": "SqlServerDbTables",
-						"type": "DatasetReference"
-					},
-					"firstRowOnly": false
-				}
-			},
-			{
 				"name": "For Each Schema Table",
 				"type": "ForEach",
-				"dependsOn": [
-					{
-						"activity": "Look for all tables",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
+				"dependsOn": [],
 				"userProperties": [],
 				"typeProperties": {
 					"items": {
-						"value": "@activity('Look for all tables').output.value",
+						"value": "@pipeline().parameters.param_tables_name",
 						"type": "Expression"
 					},
+					"isSequential": false,
 					"activities": [
 						{
-							"name": "Copy Each Table in SQL Server",
+							"name": "Copy Each Table from SQL Server to ADLS",
 							"type": "Copy",
 							"dependsOn": [],
 							"policy": {
@@ -62,7 +30,7 @@
 								"source": {
 									"type": "SqlServerSource",
 									"sqlReaderQuery": {
-										"value": "@{concat('SELECT * FROM ', item().schema_name, '.', item().table_name)}\n",
+										"value": "@{concat('SELECT * FROM ', item().table_name)}",
 										"type": "Expression"
 									},
 									"queryTimeout": "02:00:00",
@@ -89,13 +57,13 @@
 							},
 							"inputs": [
 								{
-									"referenceName": "DS_sqlServer_table_copy",
+									"referenceName": "SD_SqlServerDbTables",
 									"type": "DatasetReference"
 								}
 							],
 							"outputs": [
 								{
-									"referenceName": "paquetTable",
+									"referenceName": "DS_landing_zone",
 									"type": "DatasetReference",
 									"parameters": {
 										"schema_name": {
@@ -114,6 +82,81 @@
 				}
 			}
 		],
+		"parameters": {
+			"param_tables_name": {
+				"type": "Array",
+				"defaultValue": [
+					{
+						"schema_name": "Sales",
+						"table_name": "SalesOrderHeader"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "SalesOrderDetail"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "Customer"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "SpecialOffer"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "Currency"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "SalesTerritory"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "SalesReason"
+					},
+					{
+						"schema_name": "Person",
+						"table_name": "Address"
+					},
+					{
+						"schema_name": "Person",
+						"table_name": "EmailAddress"
+					},
+					{
+						"schema_name": "Person",
+						"table_name": "PersonPhone"
+					},
+					{
+						"schema_name": "Person",
+						"table_name": "StateProvince"
+					},
+					{
+						"schema_name": "Person",
+						"table_name": "CountryRegion"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductCostHistory"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "Product"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductSubcategory"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductModel"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductDescription"
+					}
+				]
+			}
+		},
 		"annotations": [],
 		"lastPublishTime": "2024-10-01T17:57:19Z"
 	},
