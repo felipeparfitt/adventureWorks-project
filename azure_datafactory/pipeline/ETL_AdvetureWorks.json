@@ -30,7 +30,7 @@
 								"source": {
 									"type": "SqlServerSource",
 									"sqlReaderQuery": {
-										"value": "@{concat('SELECT * FROM ', item().schema_name, '.', item().table_name)}",
+										"value": "@if(equals(item().table_name, 'Address'),\n    concat('SELECT AddressID, AddressLine1, AddressLine2, City, StateProvinceID, PostalCode, CAST(SpatialLocation AS VARCHAR(MAX)) AS SpatialLocation, rowguid, ModifiedDate FROM ', item().schema_name, '.', item().table_name),\n    concat('SELECT * FROM ', item().schema_name, '.', item().table_name)\n)",
 										"type": "Expression"
 									},
 									"queryTimeout": "02:00:00",
