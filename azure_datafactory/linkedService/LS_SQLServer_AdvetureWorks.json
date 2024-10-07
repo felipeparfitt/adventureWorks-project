@@ -1,12 +1,11 @@
 {
 	"name": "LS_SQLServer_AdvetureWorks",
-	"type": "Microsoft.DataFactory/factories/linkedservices",
 	"properties": {
 		"annotations": [],
 		"type": "SqlServer",
 		"typeProperties": {
 			"server": "DESKTOP-5NU4TTN\\SQLEXPRESS",
-			"database": "AdventureWorksLT2017",
+			"database": "AdventureWorks2022",
 			"encrypt": "optional",
 			"trustServerCertificate": false,
 			"authenticationType": "SQL",
@@ -24,5 +23,6 @@
 			"referenceName": "SelfHostedIRTSqlServer",
 			"type": "IntegrationRuntimeReference"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
 }
