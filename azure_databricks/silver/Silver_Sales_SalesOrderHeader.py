@@ -77,12 +77,6 @@ expected_schema = StructType([
 
 # COMMAND ----------
 
-# spark.sql(f"""
-#           DROP TABLE IF EXISTS {silver_target_table_name}
-#           """)
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Creating the silver table
 
@@ -148,6 +142,7 @@ def tranforming_salesOrderHeader(
     df_salesOrderHeader: DataFrame,
     sink_table_name: str,
     primary_keys: list,
+    expected_schema: StructType
     ) -> DataFrame:
     """
     Transforms and cleans data from the SalesOrderHeader DataFrame.
@@ -163,9 +158,7 @@ def tranforming_salesOrderHeader(
     print(f"Transforming the adventure_dev.bronze.SalesOrderHeader: ", end='')
 
     # Removing duplicates through primary keys
-    print(df_salesOrderHeader.count())
     df_salesOrderHeader_dedup = df_deduplicate(df_salesOrderHeader, primary_keys, 'ModifiedDate')
-    print(df_salesOrderHeader_dedup.count())
 
     # Setting default values to null values
     df_salesOrderHeader_fillna = df_salesOrderHeader_dedup.fillna(0, subset=['RevisionNumber', 'SubTotal', 'TaxAmt', 'Freight'])
@@ -192,7 +185,14 @@ def tranforming_salesOrderHeader(
         .otherwise(F.col('rowguid'))
     )
 
-    df_salesOrderHeader_fillna = df_salesOrderHeader_fillna.withColumn('TotalDue',  F.when((F.col('SubTotal') + F.col('TaxAmt') + F.col('Freight')).isNull(), 0).otherwise(F.col('TotalDue')))
+    df_salesOrderHeader_fillna = df_salesOrderHeader_fillna.withColumn(
+        'TotalDue',  
+        F.when(
+            (F.col('SubTotal') + F.col('TaxAmt') + F.col('Freight')).isNull(), 
+            0
+        )
+        .otherwise(F.col('TotalDue'))
+    )
 
     # Checking integrity of the data
     constrains_conditions = get_table_constraints_conditions(sink_table_name)
@@ -227,25 +227,29 @@ def tranforming_salesOrderHeader(
 # COMMAND ----------
 
 # # Reading data from bronze layer
+print(f"Reading {bronze_source_table_name}: ", end='')
 df_salesOrderHeader_bronze = spark.read.format("delta").table(bronze_source_table_name)
+print("Success!!")
+print("*******************************")
+
 # Tranforming bronze layer
 df_salesOrderHeader_transformed = tranforming_salesOrderHeader(
     df_salesOrderHeader=df_salesOrderHeader_bronze,
     sink_table_name=silver_target_table_name,
-    primary_keys=primary_keys
+    primary_keys=primary_keys,
+    expected_schema=expected_schema
 )
-# Upsert to the sink table (Silver Layer)
-upsert_to_silver(
+
+# Upserting data to silver layer
+upsert_delta_table(
   df_source_table=df_salesOrderHeader_transformed,
-  sink_table=sink_table_name,
+  sink_table_name=silver_target_table_name,
   primary_keys=primary_keys
 )
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
+from decimal import Decimal
 
 #Definir o esquema da tabela (mesmo esquema da tabela original)
 schema = StructType([
@@ -268,10 +272,10 @@ schema = StructType([
     StructField("CreditCardID", IntegerType(), True),
     StructField("CreditCardApprovalCode", StringType(), True),
     StructField("CurrencyRateID", IntegerType(), True),
-    StructField("SubTotal", DecimalType(19, 4), False),
-    StructField("TaxAmt", DecimalType(19, 4), False),
-    StructField("Freight", DecimalType(19, 4), False),
-    StructField("TotalDue", DecimalType(19, 4), True),
+    StructField("SubTotal", DecimalType(10, 1), False),
+    StructField("TaxAmt", DecimalType(10, 1), False),
+    StructField("Freight", DecimalType(10, 1), False),
+    StructField("TotalDue", DecimalType(10, 1), True),
     StructField("Comment", StringType(), True),
     StructField("rowguid", StringType(), True),
     StructField("ModifiedDate", StringType(), False),
@@ -294,17 +298,47 @@ columns = ["SalesOrderID", "RevisionNumber", "OrderDate", "DueDate", "ShipDate",
     # Fail: Status > 8
     # Fail: SubTotal < 0
     # Fail: TaxAmt < 0
+
 data = [
-    (1, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", "2024-01-03 10:00:00", 5, True, "SO123", "PO123", "AN123", 1, None, None, 10, 20, 30, None, "123ABC", None, 100.00, 10.00, 20.00, 130.00, "Sample comment", "UUID-123", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_1"),
-    (2, 1, "2024-01-02 10:00:00", "2024-01-03 10:00:00", None, 4, True, "SO124", "PO124", "AN124", 2, None, None, 15, 25, 35, None, "456DEF", None, 150.00, 12.00, 22.00, 184.00, "Another comment", "UUID-456", "2024-01-02 10:00:00", "2024-01-02 10:00:00", "input_file_2"),
-    (2, 1, "2024-01-02 10:00:00", "2024-01-03 10:00:00", None, 4, True, "SO124", "PO124", "AN124", 2, None, None, 15, 25, 35, None, "456DEF", None, 150.00, 12.00, 22.00, 184.00, "Another comment", "UUID-456", "2024-01-02 10:00:00", "2024-01-02 10:00:00", "input_file_2"),
-    (3, 1, "2024-01-01 10:00:00", "2023-12-31 10:00:00", None, 5, True, "SO125", "PO125", "AN125", 3, None, None, 10, 20, 30, None, "789GHI", None, 300.00, 15.00, 30.00, 345.00, "Fail: DueDate < OrderDate", "UUID-789", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_3"),
-    (4, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO126", "PO126", "AN126", 4, None, None, 10, 20, 30, None, "012JKL", None, 300.00, 15.00, -5.00, 345.00, "Fail: Freight < 0", "UUID-012", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_4"),
-    (5, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", "2023-12-31 10:00:00", 5, True, "SO127", "PO127", "AN127", 5, None, None, 10, 20, 30, None, "345MNO", None, 300.00, 15.00, 30.00, 345.00, "Fail: ShipDate < OrderDate", "UUID-345", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_5"),
-    (6, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 9, True, "SO128", "PO128", "AN128", 6, None, None, 10, 20, 30, None, "678PQR", None, 300.00, 15.00, 30.00, 345.00, "Fail: Status > 8", "UUID-678", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_6"),
-    (7, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO129", "PO129", "AN129", 7, None, None, 10, 20, 30, None, "901STU", None, -100.00, 15.00, 30.00, 345.00, "Fail: SubTotal < 0", "UUID-901", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_7"),
-    (8, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO130", "PO130", "AN130", 8, None, None, 10, 20, 30, None, "234VWX", None, 300.00, -15.00, 30.00, 345.00, "Fail: TaxAmt < 0", "UUID-234", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_8")
+    (1, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", "2024-01-03 10:00:00", 5, True, "SO123", "PO123", "AN123", 1, None, None, 
+     10, 20, 30, None, "123ABC", None, Decimal('100.00'), Decimal('10.00'), Decimal('20.00'), Decimal('130.00'), 
+     "Sample comment", "UUID-123", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_1"),
+    (2, 1, "2024-01-02 10:00:00", "2024-01-03 10:00:00", None, 4, True, "SO124", "PO124", "AN124", 2, None, None, 
+     15, 25, 35, None, "456DEF", None, Decimal('150.00'), Decimal('12.00'), Decimal('22.00'), Decimal('184.00'), 
+     "Another comment", "UUID-456", "2024-01-02 10:00:00", "2024-01-02 10:00:00", "input_file_2"),
+    (2, 1, "2024-01-02 10:00:00", "2024-01-03 10:00:00", None, 4, True, "SO124", "PO124", "AN124", 2, None, None, 
+     15, 25, 35, None, "456DEF", None, Decimal('150.00'), Decimal('12.00'), Decimal('22.00'), Decimal('184.00'), 
+     "Another comment", "UUID-456", "2024-01-02 10:00:00", "2024-01-02 10:00:00", "input_file_2"),
+    (3, 1, "2024-01-01 10:00:00", "2023-12-31 10:00:00", None, 5, True, "SO125", "PO125", "AN125", 3, None, None, 
+     10, 20, 30, None, "789GHI", None, Decimal('300.00'), Decimal('15.00'), Decimal('30.00'), Decimal('345.00'), 
+     "Fail: DueDate < OrderDate", "UUID-789", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_3"),
+    (4, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO126", "PO126", "AN126", 4, None, None, 
+     10, 20, 30, None, "012JKL", None, Decimal('300.00'), Decimal('15.00'), Decimal('-5.00'), Decimal('345.00'), 
+     "Fail: Freight < 0", "UUID-012", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_4"),
+    (5, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", "2023-12-31 10:00:00", 5, True, "SO127", "PO127", "AN127", 5, None, None, 
+     10, 20, 30, None, "345MNO", None, Decimal('300.00'), Decimal('15.00'), Decimal('30.00'), Decimal('345.00'), 
+     "Fail: ShipDate < OrderDate", "UUID-345", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_5"),
+    (6, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 9, True, "SO128", "PO128", "AN128", 6, None, None, 
+     10, 20, 30, None, "678PQR", None, Decimal('300.00'), Decimal('15.00'), Decimal('30.00'), Decimal('345.00'), 
+     "Fail: Status > 8", "UUID-678", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_6"),
+    (7, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO129", "PO129", "AN129", 7, None, None, 
+     10, 20, 30, None, "901STU", None, Decimal('-100.00'), Decimal('15.00'), Decimal('30.00'), Decimal('345.00'), 
+     "Fail: SubTotal < 0", "UUID-901", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_7"),
+    (8, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO130", "PO130", "AN130", 8, None, None, 
+     10, 20, 30, None, "234VWX", None, Decimal('300.00'), Decimal('-15.00'), Decimal('30.00'), Decimal('345.00'), 
+     "Fail: TaxAmt < 0", "UUID-234", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_8")
 ]
+# data = [
+#     (1, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", "2024-01-03 10:00:00", 5, True, "SO123", "PO123", "AN123", 1, None, None, 10, 20, 30, None, "123ABC", None, 100.00, 10.00, 20.00, 130.00, "Sample comment", "UUID-123", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_1"),
+#     (2, 1, "2024-01-02 10:00:00", "2024-01-03 10:00:00", None, 4, True, "SO124", "PO124", "AN124", 2, None, None, 15, 25, 35, None, "456DEF", None, 150.00, 12.00, 22.00, 184.00, "Another comment", "UUID-456", "2024-01-02 10:00:00", "2024-01-02 10:00:00", "input_file_2"),
+#     (2, 1, "2024-01-02 10:00:00", "2024-01-03 10:00:00", None, 4, True, "SO124", "PO124", "AN124", 2, None, None, 15, 25, 35, None, "456DEF", None, 150.00, 12.00, 22.00, 184.00, "Another comment", "UUID-456", "2024-01-02 10:00:00", "2024-01-02 10:00:00", "input_file_2"),
+#     (3, 1, "2024-01-01 10:00:00", "2023-12-31 10:00:00", None, 5, True, "SO125", "PO125", "AN125", 3, None, None, 10, 20, 30, None, "789GHI", None, 300.00, 15.00, 30.00, 345.00, "Fail: DueDate < OrderDate", "UUID-789", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_3"),
+#     (4, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO126", "PO126", "AN126", 4, None, None, 10, 20, 30, None, "012JKL", None, 300.00, 15.00, -5.00, 345.00, "Fail: Freight < 0", "UUID-012", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_4"),
+#     (5, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", "2023-12-31 10:00:00", 5, True, "SO127", "PO127", "AN127", 5, None, None, 10, 20, 30, None, "345MNO", None, 300.00, 15.00, 30.00, 345.00, "Fail: ShipDate < OrderDate", "UUID-345", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_5"),
+#     (6, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 9, True, "SO128", "PO128", "AN128", 6, None, None, 10, 20, 30, None, "678PQR", None, 300.00, 15.00, 30.00, 345.00, "Fail: Status > 8", "UUID-678", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_6"),
+#     (7, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO129", "PO129", "AN129", 7, None, None, 10, 20, 30, None, "901STU", None, -100.00, 15.00, 30.00, 345.00, "Fail: SubTotal < 0", "UUID-901", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_7"),
+#     (8, 1, "2024-01-01 10:00:00", "2024-01-02 10:00:00", None, 5, True, "SO130", "PO130", "AN130", 8, None, None, 10, 20, 30, None, "234VWX", None, 300.00, -15.00, 30.00, 345.00, "Fail: TaxAmt < 0", "UUID-234", "2024-01-01 10:00:00", "2024-01-01 10:00:00", "input_file_8")
+# ]
 
 # Criar DataFrame com dados fictícios
 df = spark.createDataFrame(data, schema)
@@ -342,4 +376,14 @@ df_casted = df.select(
 # Mostrar o DataFrame resultante
 df_casted.printSchema()
 
-display(df_casted)
+tranforming_salesOrderHeader(df_casted)
+
+# COMMAND ----------
+
+tranforming_salesOrderHeader(df_casted,silver_target_table_name,primary_keys,expected_schema)
+
+# df_salesOrderHeader_transformed = tranforming_salesOrderHeader(
+#     df_salesOrderHeader=df_salesOrderHeader_bronze,
+#     sink_table_name=silver_target_table_name,
+#     primary_keys=primary_keys
+# )
