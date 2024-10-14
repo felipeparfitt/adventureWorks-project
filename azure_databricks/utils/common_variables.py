@@ -9,7 +9,7 @@ from pyspark.sql import DataFrame, Window
 from pyspark.sql.types import (
     StructType, StructField, StringType, 
     IntegerType, ByteType, BooleanType, 
-    TimestampType, DecimalType
+    TimestampType, DecimalType, ShortType
 )
 from delta.tables import DeltaTable
 
@@ -193,6 +193,10 @@ def get_table_constraints_conditions(table_name: str) -> str:
     # Collect all constraints into a list of strings
     constraints_list = [row["value"] for row in constraints_df.collect()]
 
+    # If no constraints are found, return a condition that always evaluates to true
+    if not constraints_list:
+        return "1=1"
+
     # Combine the constraints into a single condition string with "AND"
     combined_conditions = " AND ".join([f"({condition})" for condition in constraints_list])
     
@@ -289,10 +293,11 @@ def upsert_delta_table(
     Raises:
         Exception: Raises an exception if the Delta table does not exist.
     """
-    print(f"Upserting the {sink_table_name}:", end='')
+    print(f"Upserting the {sink_table_name}: ", end='')
 
-    # Verify if the table exists
-    if DeltaTable.isDeltaTable(spark, sink_table_name):
+    # Verify if the table 
+    #DeltaTable.isDeltaTable(spark, sink_table_name): ## nao funciona 
+    if spark.catalog.tableExists(sink_table_name):
 
         # Getting the primary keys of the table
         comparative_keys = [f"target.{primary_key} = source.{primary_key}" for primary_key in primary_keys]
