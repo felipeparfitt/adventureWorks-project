@@ -115,6 +115,10 @@
 						"table_name": "SalesReason"
 					},
 					{
+						"schema_name": "Sales",
+						"table_name": "vPersonDemographics"
+					},
+					{
 						"schema_name": "Person",
 						"table_name": "Address"
 					},
@@ -137,6 +141,10 @@
 					{
 						"schema_name": "Person",
 						"table_name": "Person"
+					},
+					{
+						"schema_name": "Person",
+						"table_name": "BusinessEntityAddress"
 					},
 					{
 						"schema_name": "Production",
