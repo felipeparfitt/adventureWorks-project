@@ -119,6 +119,14 @@
 						"table_name": "vPersonDemographics"
 					},
 					{
+						"schema_name": "Sales",
+						"table_name": "CountryRegionCurrency"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "SalesOrderHeaderSalesReason"
+					},
+					{
 						"schema_name": "Person",
 						"table_name": "Address"
 					},
@@ -149,6 +157,10 @@
 					{
 						"schema_name": "Production",
 						"table_name": "ProductCostHistory"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductListPriceHistory"
 					},
 					{
 						"schema_name": "Production",
