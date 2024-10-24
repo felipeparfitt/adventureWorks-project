@@ -122,12 +122,14 @@ constraints = [
         "ADD CONSTRAINT CK_Product_ReorderPoint CHECK (ReorderPoint > 0)",
         "ADD CONSTRAINT CK_Product_SafetyStockLevel CHECK (SafetyStockLevel > 0)",
         "ADD CONSTRAINT CK_Product_StandardCost CHECK (StandardCost >= 0.00)",
-        "ADD CONSTRAINT CK_Product_Weight CHECK (Weight >= 0.00)",
+        "ADD CONSTRAINT CK_Product_Weight CHECK (Weight >= 0.00 OR Weight IS NULL)",
         "ADD CONSTRAINT CK_Product_Class CHECK (upper(Class) IN ('H', 'M', 'L') OR Class IS NULL)",
-        "ADD CONSTRAINT CK_Product_ProductLine CHECK (upper(ProductLine) IN ('R', 'M', 'T', 'S') OR Class IS NULL)",
+        "ADD CONSTRAINT CK_Product_ProductLine CHECK (upper(ProductLine) IN ('R', 'M', 'T', 'S') OR ProductLine IS NULL)",
         "ADD CONSTRAINT CK_Product_SellEndDate CHECK (SellEndDate >= SellStartDate OR SellEndDate IS NULL)",
         "ADD CONSTRAINT CK_Product_Style CHECK (upper(Style) IN ('U', 'M', 'W') OR Style IS NULL)",
     ]
+# Modified conditions:
+# CK_Product_Weight CHECK -> (Weight >= 0.00)" to (Weight >= 0.00 OR Weight IS NULL)"
 
 # Call the function to add the constraints
 add_constraints(table_name=silver_target_table_name, constraints=constraints)
@@ -191,11 +193,16 @@ def tranforming_Product(
         .otherwise(F.col('rowguid'))
     )
 
+    # Removing whitespaces
+    df_Product_fillna = df_Product_fillna.withColumn('Class', F.trim(F.col('Class')))
+    df_Product_fillna = df_Product_fillna.withColumn('Style', F.trim(F.col('Style')))
+    df_Product_fillna = df_Product_fillna.withColumn('ProductLine', F.trim(F.col('ProductLine')))
+
     # Checking integrity of the data
     constrains_conditions = get_table_constraints_conditions(sink_table_name)
     df_Product_cr = df_Product_fillna.filter(F.expr(constrains_conditions))
     df_Product_qr = df_Product_fillna.filter(~F.expr(constrains_conditions))
-
+    
     # Casting to expected schema
     select_exprs = [
       F.col(field.name).cast(field.dataType).alias(field.name)

@@ -91,7 +91,7 @@ spark.sql(f"""
 constraints = [
         "ADD CONSTRAINT CK_SpecialOffer_DiscountPct CHECK (DiscountPct >= 0.00)",
         "ADD CONSTRAINT CK_SpecialOffer_EndDate CHECK (EndDate >= StartDate)",
-        "ADD CONSTRAINT CK_SpecialOffer_MaxQty CHECK (MaxQty >= 0)",
+        "ADD CONSTRAINT CK_SpecialOffer_MaxQty CHECK (MaxQty >= 0 OR MaxQty IS NULL)",
         "ADD CONSTRAINT CK_SpecialOffer_MinQty CHECK (MinQty >= 0)"
     ]
 
@@ -142,11 +142,11 @@ def tranforming_SpecialOffer(
         .otherwise(F.col('_process_timestamp'))
     )
     df_SpecialOffer_fillna = df_SpecialOffer_fillna.fillna(
-        0.00, 
+        0, 
         subset=['DiscountPct']
     )
     df_SpecialOffer_fillna = df_SpecialOffer_fillna.fillna(
-        0.00, 
+        0, 
         subset=['MinQty']
     )
     df_SpecialOffer_fillna = df_SpecialOffer_fillna.withColumn(
