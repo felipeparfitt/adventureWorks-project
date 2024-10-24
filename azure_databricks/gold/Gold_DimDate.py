@@ -27,6 +27,8 @@ env = dbutils.widgets.get('env')
 
 # Table info
 table_name = "DimDate"
+
+# Target info
 gold_target_path = f"{gold_path}/{table_name}"
 gold_target_table_name = f"{catalog_name}.gold.{table_name}"
 

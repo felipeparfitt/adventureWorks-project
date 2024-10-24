@@ -118,7 +118,7 @@ df_DimCurrency = spark.read.table(f"{catalog_name}.gold.DimCurrency")
 
 # COMMAND ----------
 
-# window_spec = Window.partitionBy(F.col('SalesOrderHeader.SalesOrderNumber')).orderBy(F.col('SalesOrderDetail.SalesOrderID'))
+# Defining a window function to order the SalesOrderNumber column
 window_spec = Window.partitionBy(F.col('ssoh.SalesOrderNumber')).orderBy(F.col('ssod.SalesOrderID'))
 
 # Combining all source tables through joins to create the FactInternetSales table

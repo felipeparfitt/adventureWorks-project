@@ -134,6 +134,7 @@ df_ppmpdc_ppd = (
 )
 df_ppmpdc_ppd = df_ppmpdc_ppd.toDF(*[c.strip() for c in df_ppmpdc_ppd.columns])
 
+# Joining ProductCostHistory and df_ProductListPriceHistory
 df_ppch_pplph = df_ProductCostHistory.alias('ppch').join(
     other=df_ProductListPriceHistory.alias('ppch_pplph'), 
     on=(
@@ -149,7 +150,6 @@ df_ppch_pplph = df_ProductCostHistory.alias('ppch').join(
     F.col('ppch_pplph.ListPrice').alias('ListPrice'),
     F.col('ppch.StandardCost').alias('StandardCost')
 )
-
 
 # Combining all source tables through joins to create the DimProduct table
 df_DimProduct = (
