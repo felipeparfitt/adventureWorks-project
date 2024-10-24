@@ -48,11 +48,7 @@ gold_target_table_name = f"{catalog_name}.gold.{table_name}"
 
 # COMMAND ----------
 
-spark.sql(f"DROP TABLE IF EXISTS {gold_target_table_name}")
-
-# COMMAND ----------
-
-# Creating the DimProduct table in gold layer
+# Creating the DimPromotion table in gold layer
 spark.sql(f"""
     CREATE EXTERNAL TABLE IF NOT EXISTS {gold_target_table_name} (
         PromotionKey BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) PRIMARY KEY,

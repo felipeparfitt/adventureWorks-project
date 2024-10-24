@@ -59,7 +59,7 @@ expected_schema = StructType([
 
 # COMMAND ----------
 
-# Creating the CountryRegionCurrency table in silver layer
+# Creating the Sales_CountryRegionCurrency table in silver layer
 spark.sql(f"""
     CREATE EXTERNAL TABLE IF NOT EXISTS {silver_target_table_name} (
         CountryRegionCode STRING NOT NULL,

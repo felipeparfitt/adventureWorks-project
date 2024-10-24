@@ -104,7 +104,3 @@ upsert_delta_table(
   primary_keys=primary_keys,
   auto_generated_column=['CurrencyKey']
 )
-
-# COMMAND ----------
-
-display(spark.read.table(gold_target_table_name))

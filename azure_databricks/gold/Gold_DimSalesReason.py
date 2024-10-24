@@ -106,7 +106,3 @@ upsert_delta_table(
   primary_keys=primary_keys,
   auto_generated_column=['SalesReasonKey']
 )
-
-# COMMAND ----------
-
-display(spark.read.table(gold_target_table_name))

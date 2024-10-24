@@ -149,7 +149,6 @@ def tranforming_SalesTerritory(
         .otherwise(F.col('rowguid'))
     )
 
-
     # Checking integrity of the data
     constrains_conditions = get_table_constraints_conditions(sink_table_name)
     df_SalesTerritory_cr = df_SalesTerritory_fillna.filter(F.expr(constrains_conditions))
