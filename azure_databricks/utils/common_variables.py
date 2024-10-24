@@ -5,7 +5,7 @@
 # COMMAND ----------
 
 # Installing the required libraries
-%pip install deep-translator
+#%pip install deep-translator
 
 # Importing the required libraries
 from pyspark.sql import functions as F
@@ -463,12 +463,12 @@ def reading_all_silver_tables(
     print("*******************************")
     return dict_dataframes
 
-@F.udf(returnType=StringType())
-def translate_to_spanish(input):
-    return GoogleTranslator(source='auto', target='es').translate(input)
-@F.udf(returnType=StringType())
-def translate_to_french(input):
-    return GoogleTranslator(source='auto', target='fr').translate(input)
+# @F.udf(returnType=StringType())
+# def translate_to_spanish(input):
+#     return GoogleTranslator(source='auto', target='es').translate(input)
+# @F.udf(returnType=StringType())
+# def translate_to_french(input):
+#     return GoogleTranslator(source='auto', target='fr').translate(input)
 
 
 # COMMAND ----------
