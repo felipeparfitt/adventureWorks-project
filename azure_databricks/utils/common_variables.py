@@ -4,14 +4,20 @@
 
 # COMMAND ----------
 
+# Installing the required libraries
+%pip install deep-translator
+
+# Importing the required libraries
 from pyspark.sql import functions as F
 from pyspark.sql import DataFrame, Window
 from pyspark.sql.types import (
     StructType, StructField, StringType, 
     IntegerType, ByteType, BooleanType, 
-    TimestampType, DecimalType, ShortType
+    TimestampType, DecimalType, ShortType,
+    DateType
 )
 from delta.tables import DeltaTable
+from deep_translator import GoogleTranslator
 
 # COMMAND ----------
 
@@ -77,6 +83,24 @@ adventureworks_tables_info = {
         "notebook_path": "/path/to/notebook/SalesReason",
         "primary_keys": ["SalesReasonID"]
     },
+    "vPersonDemographics": {
+        "active": True,
+        "schema_name": "Sales",
+        "notebook_path": "/path/to/notebook/vPersonDemographics",
+        "primary_keys": ["BusinessEntityID"]
+    },
+    "CountryRegionCurrency": {
+        "active": True,
+        "schema_name": "Sales",
+        "notebook_path": "/path/to/notebook/CountryRegionCurrency",
+        "primary_keys": ["CountryRegionCode", "CurrencyCode"]
+    },
+    "SalesOrderHeaderSalesReason": {
+        "active": True,
+        "schema_name": "Sales",
+        "notebook_path": "/path/to/notebook/SalesOrderHeaderSalesReason",
+        "primary_keys": ["SalesOrderID", "SalesReasonID"]
+    },
     "Address": {
         "active": True,
         "schema_name": "Person",
@@ -107,10 +131,28 @@ adventureworks_tables_info = {
         "notebook_path": "/path/to/notebook/CountryRegion",
         "primary_keys": ["CountryRegionCode"]
     },
+    "Person": {
+        "active": True,
+        "schema_name": "Person",
+        "notebook_path": "/path/to/notebook/CountryRegion",
+        "primary_keys": ["BusinessEntityID"]
+    },
+    "BusinessEntityAddress": {
+        "active": True,
+        "schema_name": "Person",
+        "notebook_path": "/path/to/notebook/CountryRegion",
+        "primary_keys": ["BusinessEntityID", "AddressID", "AddressTypeID"]
+    },
     "ProductCostHistory": {
         "active": True,
         "schema_name": "Production",
         "notebook_path": "/path/to/notebook/ProductCostHistory",
+        "primary_keys": ["ProductID", "StartDate"]
+    },
+    "ProductListPriceHistory": {
+        "active": True,
+        "schema_name": "Production",
+        "notebook_path": "/path/to/notebook/ProductListPriceHistory",
         "primary_keys": ["ProductID", "StartDate"]
     },
     "Product": {
@@ -136,6 +178,75 @@ adventureworks_tables_info = {
         "schema_name": "Production",
         "notebook_path": "/path/to/notebook/ProductDescription",
         "primary_keys": ["ProductDescriptionID"]
+    },
+    "ProductCategory": {
+        "active": True,
+        "schema_name": "Production",
+        "notebook_path": "/path/to/notebook/ProductDescription",
+        "primary_keys": ["ProductCategoryID"]
+    },
+    "UnitMeasure": {
+        "active": True,
+        "schema_name": "Production",
+        "notebook_path": "/path/to/notebook/ProductDescription",
+        "primary_keys": ["UnitMeasureCode"]
+    },
+    "ProductModelProductDescriptionCulture": {
+        "active": True,
+        "schema_name": "Production",
+        "notebook_path": "/path/to/notebook/ProductDescription",
+        "primary_keys": ["ProductModelID", "ProductDescriptionID", "CultureID"]
+    }
+}
+
+dw_adventureworks_tables_info = {
+    "DimProduct": {
+        "active": True,
+        "source_tables": ['Product', 'ProductModel', 'ProductDescription',                          'ProductModelProductDescriptionCulture', 'ProductCostHistory', 'ProductListPriceHistory'],
+        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "primary_keys": ['ProductAlternateKey', 'StartDate']
+    },
+    "DimCurrency": {
+        "active": True,
+        "source_tables": ['Currency'],
+        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "primary_keys": ['CurrencyAlternateKey']
+    },
+    "DimPromotion": {
+        "active": True,
+        "source_tables": ['SpecialOffer'],
+        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "primary_keys": ['PromotionAlternateKey']
+    },
+    "DimCustomer": {
+        "active": True,
+        "source_tables": ['Customer', 'Person', 'PersonPhone', 'EmailAddress', 'BusinessEntityAddress', 'Address', 'vPersonDemographics'],
+        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "primary_keys": ['CustomerKey']
+    },
+    "DimSalesTerritory": {
+        "active": True,
+        "source_tables": ['SalesTerritory', 'CountryRegion'],
+        "notebook_path": 'azure_databricks/gold/Gold_DimSalesTerritory',
+        "primary_keys": ['SalesTerritoryAlternateKey']
+    },
+    "DimSalesReason": {
+        "active": True,
+        "source_tables": ['SalesReason'],
+        "notebook_path": 'azure_databricks/gold/Gold_DimSalesReason',
+        "primary_keys": ['SalesReasonAlternateKey']
+    },
+    "FactInternetSales": {
+        "active": True,
+        "source_tables": ['Product','SalesOrderDetail', 'SalesOrderHeader', 'SalesTerritory', 'CountryRegionCurrency'],
+        "notebook_path": 'azure_databricks/gold/FactInternetSales',
+        "primary_keys": ['SalesOrderLineNumber', 'SalesOrderLineNumber']
+    },
+    "FactInternetSalesReason": {
+        "active": True,
+        "source_tables": ['SalesOrderHeaderSalesReason'],
+        "notebook_path": 'azure_databricks/gold/FactInternetSalesReason',
+        "primary_keys": ['SalesOrderNumber', 'SalesOrderLineNumber', 'SalesReasonKey']
     }
 }
 
@@ -232,7 +343,6 @@ def df_deduplicate(
 
     return df_dedup
 
-
 def verify_schema(
     df: DataFrame,
     expected_schema: StructType
@@ -280,7 +390,8 @@ def verify_schema(
 def upsert_delta_table(
       df_source_table: DataFrame, 
       sink_table_name: str, 
-      primary_keys: list
+      primary_keys: list,
+      auto_generated_column=[]
     ) -> None:
     """
     Upserts data from a source DataFrame into a Delta table.
@@ -289,7 +400,7 @@ def upsert_delta_table(
         df_source_table (DataFrame): The DataFrame containing the source data to be upserted.
         sink_table_name (str): The name of the Delta table where data will be upserted.
         primary_keys (list): A list of column names that serve as primary keys for matching records.
-
+        auto_generated_column (list): If exists a list of column names that are auto generated by the system, it will  be used to exclude them from the upsert operation.
     Raises:
         Exception: Raises an exception if the Delta table does not exist.
     """
@@ -305,19 +416,60 @@ def upsert_delta_table(
 
         # Reading the sink table
         sink_delta_table = DeltaTable.forName(spark, sink_table_name)
+        # Getting sink table columns that aren't auto generated
+        columns_sink_delta_table = spark.catalog.listColumns(sink_table_name)       
+        set_columns = {
+            f"{col.name}": f"source.{col.name}"
+            for col in columns_sink_delta_table
+            if col.name not in auto_generated_column
+        }
 
         sink_delta_table.alias('target').merge(
             source=df_source_table.alias('source'),
             condition=comparative_keys
-        ).whenMatchedUpdateAll() \
-         .whenNotMatchedInsertAll() \
-         .whenNotMatchedBySourceDelete() \
-         .execute()
+        ).whenMatchedUpdate(
+            set=set_columns
+        ).whenNotMatchedInsert(
+             values=set_columns
+        ).whenNotMatchedBySourceDelete() \
+        .execute()
     else:
         raise Exception(f"Delta table: {sink_table_name} not found!")
     
     print("Success !!")
     print("*******************************")
+
+def reading_all_silver_tables(
+    silver_source_table_names: list
+    ) -> dict:
+    """
+    Reads all source tables from the silver layer and stores them as DataFrames in a dictionary.
+
+    Parameters:
+        silver_source_table_names (list): A list of table names from the silver layer to be read.
+
+    Returns:
+        dict: A dictionary where the keys are dynamically generated DataFrame names based on the table name, 
+            and the values are the corresponding DataFrames.
+    """
+    print(f"Reading all source tables needed from the silver layer: ", end='')
+    dict_dataframes = {}
+    for silver_source_table in silver_source_table_names:
+        _table_name = silver_source_table.split('_')[-1]
+        df = spark.read.table(silver_source_table)
+        dict_dataframes[f'df_{_table_name}'] = df
+
+    print("Success !!")
+    print("*******************************")
+    return dict_dataframes
+
+@F.udf(returnType=StringType())
+def translate_to_spanish(input):
+    return GoogleTranslator(source='auto', target='es').translate(input)
+@F.udf(returnType=StringType())
+def translate_to_french(input):
+    return GoogleTranslator(source='auto', target='fr').translate(input)
+
 
 # COMMAND ----------
 
