@@ -43,7 +43,7 @@ silver_target_table_name = f"{catalog_name}.silver.{schema_table_name}"
 
 # COMMAND ----------
 
-# sales_SalesOrderHeader expected schema
+# Expected schema
 expected_schema = StructType([
     StructField("AddressID", IntegerType(), False),
     StructField("AddressLine1", StringType(), False),

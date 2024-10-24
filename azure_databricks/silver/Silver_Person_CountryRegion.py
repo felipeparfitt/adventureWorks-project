@@ -43,7 +43,7 @@ silver_target_table_name = f"{catalog_name}.silver.{schema_table_name}"
 
 # COMMAND ----------
 
-# Sales_SalesOrderDetail expected schema
+# Expected schema
 expected_schema = StructType([
     StructField("CountryRegionCode", StringType(), False),
     StructField("Name", StringType(), False),
@@ -59,7 +59,7 @@ expected_schema = StructType([
 
 # COMMAND ----------
 
-# Creating the sales_SalesOrderHeader table in silver layer
+# Creating the  Person_CountryRegion table in silver layer
 spark.sql(f"""
       CREATE EXTERNAL TABLE IF NOT EXISTS {silver_target_table_name} (
         CountryRegionCode STRING NOT NULL PRIMARY KEY,

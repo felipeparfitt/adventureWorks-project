@@ -59,7 +59,7 @@ expected_schema = StructType([
 
 # COMMAND ----------
 
-# Creating the SalesOrderHeaderSalesReason table in silver layer
+# Creating the Sales_SalesOrderHeaderSalesReason table in silver layer
 spark.sql(f"""
     CREATE EXTERNAL TABLE IF NOT EXISTS {silver_target_table_name} (
         SalesOrderID INT NOT NULL,
