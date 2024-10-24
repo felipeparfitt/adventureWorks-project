@@ -1,17 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # ETL: Landing Zone to Bronze Layer
-# MAGIC This notebook provides functions to handle data ingestion and storage, distinguishing between batch and streaming modes.
+# MAGIC This notebook provides functions to handle data ingestion and storage. These functions read files from the landing zone and load them as Delta tables in the bronze layer.
 # MAGIC
 # MAGIC ## Batch Mode
-# MAGIC - **Reading Data in Batch Mode:** Reads CSV data from a landing zone using a specified schema and adds a timestamp column. It returns the DataFrame for further processing.
+# MAGIC - **Reading Data in Batch Mode:** Reads parquet data from a landing zone and adds two columns: _process_timestamp and _input_file_name. It returns the DataFrame for further processing.
 # MAGIC
 # MAGIC - **Writing Data in Batch Mode:** Writes the DataFrame to a Delta table in the bronze layer, overwriting any existing data. It efficiently handles batch data storage.
-# MAGIC
-# MAGIC ## Streaming Mode
-# MAGIC - **Reading Data in Streaming Mode:** Reads CSV data from the landing zone in streaming mode, using checkpointing for schema inference and adding a timestamp column. It supports continuous data ingestion.
-# MAGIC
-# MAGIC - **Writing Data in Streaming Mode:** Writes the DataFrame to a Delta table in the bronze layer using streaming mode. It includes checkpointing and ensures real-time data updates and storage.
 
 # COMMAND ----------
 
@@ -139,24 +134,3 @@ for table_name, table_info in adventureworks_tables_info.items():
             LOCATION '{bronze_path}/{table_info["schema_name"]}/{table_name}'
             """
         )
-
-# COMMAND ----------
-
-for table_name, table_info in adventureworks_tables_info.items():
-    print(f"{table_name}:\n #=:")
-    result = spark.sql(f"""
-            SELECT COUNT(*)
-            FROM {catalog_name}.bronze.{table_info['schema_name']}_{table_name}
-            """)
-    result.show()
-
-# COMMAND ----------
-
-df = spark.read.table('adventureworks_dev.bronze.person_address')
-df = df.withColumn('teste', F.col("_metadata.file_modification_time"))
-df.printSchema()
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC SELECT * FROM adventureworks_dev.bronze.person_address
