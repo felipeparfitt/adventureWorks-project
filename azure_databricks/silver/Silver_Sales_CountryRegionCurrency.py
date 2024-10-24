@@ -28,7 +28,7 @@ env = dbutils.widgets.get('env')
 # COMMAND ----------
 
 # Table info
-table_name = "Customer"
+table_name = "CountryRegionCurrency"
 schema_name = adventureworks_tables_info[table_name]['schema_name']
 schema_table_name = f"{schema_name}_{table_name}"
 primary_keys = adventureworks_tables_info[table_name]['primary_keys']
@@ -45,12 +45,8 @@ silver_target_table_name = f"{catalog_name}.silver.{schema_table_name}"
 
 # Expected schema
 expected_schema = StructType([
-    StructField("CustomerID", IntegerType(), False),
-    StructField("PersonID", IntegerType(), True),
-    StructField("StoreID", IntegerType(), True),
-    StructField("TerritoryID", IntegerType(), True),
-    StructField("AccountNumber", StringType(), True),
-    StructField("rowguid", StringType(), False),
+    StructField("CountryRegionCode", StringType(), False),
+    StructField("CurrencyCode", StringType(), False),
     StructField("ModifiedDate", TimestampType(), False),
     StructField("_process_timestamp", TimestampType(), False),
     StructField("_input_file_name", StringType(), False)
@@ -63,15 +59,11 @@ expected_schema = StructType([
 
 # COMMAND ----------
 
-# Creating the Sales_Customer table in silver layer
+# Creating the CountryRegionCurrency table in silver layer
 spark.sql(f"""
     CREATE EXTERNAL TABLE IF NOT EXISTS {silver_target_table_name} (
-        CustomerID INT NOT NULL PRIMARY KEY,
-        PersonID INT NOT NULL,
-        StoreID INT,
-        TerritoryID INT,
-        AccountNumber STRING,
-        rowguid STRING NOT NULL,
+        CountryRegionCode STRING NOT NULL,
+        CurrencyCode STRING NOT NULL,
         ModifiedDate TIMESTAMP NOT NULL DEFAULT current_timestamp(),
         _process_timestamp TIMESTAMP NOT NULL DEFAULT current_timestamp(),
         _input_file_name STRING NOT NULL
@@ -80,12 +72,6 @@ spark.sql(f"""
     LOCATION '{silver_target_path}'
     TBLPROPERTIES ('delta.feature.allowColumnDefaults' = 'enabled')
 """)
-constraints = [
-        "ADD CONSTRAINT CK_Customer_PersonID CHECK (PersonID IS NOT NULL)"
-    ]
-
-# Call the function to add the constraints
-add_constraints(table_name=silver_target_table_name, constraints=constraints)
 
 # COMMAND ----------
 
@@ -94,75 +80,62 @@ add_constraints(table_name=silver_target_table_name, constraints=constraints)
 
 # COMMAND ----------
 
-def tranforming_Customer(
-    df_Customer: DataFrame,
+def tranforming_CountryRegionCurrency(
+    df_CountryRegionCurrency: DataFrame,
     sink_table_name: str,
     primary_keys: list,
     expected_schema: StructType
     ) -> DataFrame:
     """
-    Transforms and cleans data from the Sales.Customer table.
+    Transforms and cleans data from the Sales.CountryRegionCurrency table.
 
     Parameters:
-        df_Customer (DataFrame): The DataFrame containing the Customer data to be transformed.
+        df_CountryRegionCurrency (DataFrame): The DataFrame containing the CountryRegionCurrency data to be transformed.
         sink_table_name (str): The name of the Delta table where the transformed data will be checked against constraints.
         primary_keys (list): A list of column names that serve as primary keys for deduplication.
         expected_schema (StructType): The expected schema for the transformed DataFrame.    
     Returns:
         DataFrame: The cleaned and transformed DataFrame with verified schema, ready for further processing.
     """
-    print(f"Transforming the adventure_dev.bronze.sales_Customer: ", end='')
+    print(f"Transforming the adventure_dev.bronze.sales_CountryRegionCurrency: ", end='')
 
     # Removing duplicates through primary keys
-    df_Customer_dedup = df_deduplicate(
-        df=df_Customer, 
+    df_CountryRegionCurrency_dedup = df_deduplicate(
+        df=df_CountryRegionCurrency, 
         primary_keys=primary_keys,
         order_col='ModifiedDate'
     )
     # Setting default values to null values
-    df_Customer_fillna = df_Customer_dedup.withColumn(
+    df_CountryRegionCurrency_fillna = df_CountryRegionCurrency_dedup.withColumn(
         'ModifiedDate',
         F.when(F.col('ModifiedDate').isNull(), F.current_timestamp())
         .otherwise(F.col('ModifiedDate'))
     )
-    df_Customer_fillna = df_Customer_fillna.withColumn(
+    df_CountryRegionCurrency_fillna = df_CountryRegionCurrency_fillna.withColumn(
         '_process_timestamp',
         F.when(F.col('_process_timestamp').isNull(), F.current_timestamp())
         .otherwise(F.col('_process_timestamp'))
     )
-    df_Customer_fillna = df_Customer_fillna.withColumn(
-        'rowguid',
-        F.when(F.col('rowguid').isNull(), F.expr("uuid()"))
-        .otherwise(F.col('rowguid'))
-    )
-    df_Customer_fillna = df_Customer_fillna.withColumn(
-        'AccountNumber',
-        F.when(
-            F.col('AccountNumber').isNull(), 
-            F.concat(F.lit('AW'), F.expr("right(concat('00000000', cast(CustomerID as string)), 8)"))
-        )
-        .otherwise(F.col('AccountNumber'))
-    )
 
     # Checking integrity of the data
     constrains_conditions = get_table_constraints_conditions(sink_table_name)
-    df_Customer_cr = df_Customer_fillna.filter(F.expr(constrains_conditions))
-    df_Customer_qr = df_Customer_fillna.filter(~F.expr(constrains_conditions))
+    df_CountryRegionCurrency_cr = df_CountryRegionCurrency_fillna.filter(F.expr(constrains_conditions))
+    df_CountryRegionCurrency_qr = df_CountryRegionCurrency_fillna.filter(~F.expr(constrains_conditions))
 
     # Casting to expected schema
     select_exprs = [
       F.col(field.name).cast(field.dataType).alias(field.name)
       for field in expected_schema.fields
     ]
-    df_Customer_casted = df_Customer_cr.select(*select_exprs)
+    df_CountryRegionCurrency_casted = df_CountryRegionCurrency_cr.select(*select_exprs)
     
     # Verify expected schema
-    verify_schema(df_Customer_casted, expected_schema)
+    verify_schema(df_CountryRegionCurrency_casted, expected_schema)
 
     print("Success !!")
     print("*******************************")
 
-    return df_Customer_casted
+    return df_CountryRegionCurrency_casted
 
 # COMMAND ----------
 
@@ -173,13 +146,13 @@ def tranforming_Customer(
 
 # # Reading data from bronze layer
 print(f"Reading {bronze_source_table_name}: ", end='')
-df_Customer_bronze = spark.read.format("delta").table(bronze_source_table_name)
+df_CountryRegionCurrency_bronze = spark.read.format("delta").table(bronze_source_table_name)
 print("Success!!")
 print("*******************************")
 
 # Tranforming bronze layer
-df_Customer_transformed = tranforming_Customer(
-    df_Customer=df_Customer_bronze,
+df_CountryRegionCurrency_transformed = tranforming_CountryRegionCurrency(
+    df_CountryRegionCurrency=df_CountryRegionCurrency_bronze,
     sink_table_name=silver_target_table_name,
     primary_keys=primary_keys,
     expected_schema=expected_schema
@@ -187,7 +160,7 @@ df_Customer_transformed = tranforming_Customer(
 
 # Upserting data to silver layer
 upsert_delta_table(
-  df_source_table=df_Customer_transformed,
+  df_source_table=df_CountryRegionCurrency_transformed,
   sink_table_name=silver_target_table_name,
   primary_keys=primary_keys
 )

@@ -15,14 +15,6 @@
 
 # COMMAND ----------
 
-# Importing libs
-from pyspark.sql import functions as F
-from pyspark.sql import DataFrame
-
-from delta.tables import DeltaTable
-
-# COMMAND ----------
-
 dbutils.widgets.text(name='env', defaultValue="", label='Enter the environment in lower case')
 env = dbutils.widgets.get('env')
 
@@ -63,7 +55,6 @@ def read_landing_data_batch(
              .withColumn('_input_file_name', F.input_file_name())
     )
     print("Success !!")
-    print("*******************************")
     return landing_df
     
 # Writing data in batch mode:
@@ -72,7 +63,7 @@ def write_bronze_data_batch(
         bronze_path: str, 
         schema_name: str, 
         table_name: str,
-        comparative_keys: dict,
+        primary_keys: dict,
     ) -> None:
     """
     Writes data to the bronze layer in batch mode.
@@ -86,14 +77,14 @@ def write_bronze_data_batch(
     Returns:
         None
     """
-    print(f"(BATCH) Write {table_name} to bronze layer:", end='')
+    print(f"(BATCH) Write {table_name} to bronze layer: ", end='')
     
     # Verify if the table exists in the bronze layer
     if DeltaTable.isDeltaTable(spark, f"{bronze_path}/{schema_name}/{table_name}"):
 
         # Getting the primary keys of the table
         comparative_keys = [f"target.{primary_key} = source.{primary_key}" for primary_key in primary_keys]
-        comparative_keys = " AND ".join(comparative_keys) if len(primary_keys) > 1 else a[0]
+        comparative_keys = " AND ".join(comparative_keys) if len(primary_keys) > 1 else comparative_keys[0]
 
         # Reading the bronze table if it exists
         bronze_delta_table = DeltaTable.forPath(spark, f"{bronze_path}/{schema_name}/{table_name}")
@@ -101,18 +92,17 @@ def write_bronze_data_batch(
         bronze_delta_table.alias('target').merge(
             source=df.alias('source'),
             condition=comparative_keys
-        ).whenMatchedUpdateAll()
-         .whenNotMatchedInsertAll()
-         .whenNotMatchedBySourceDelete()
+        ).whenMatchedUpdateAll() \
+         .whenNotMatchedInsertAll() \
+         .whenNotMatchedBySourceDelete() \
          .execute()
     else:
-        bronze_df = (
-            df.write
-              .format('delta')
-              .option('mergeSchema', 'true') # enables schema evolution in bronze layer
-              .mode(write_mode)
-              .save(f"{bronze_path}/{schema_name}/{table_name}")
-        )
+        (df.write
+            .format('delta')
+            .option('mergeSchema', 'true') # enables schema evolution in bronze layer
+            .mode('overwrite')
+            .save(f"{bronze_path}/{schema_name}/{table_name}")
+    )
     print("Success !!")
     print("*******************************")
 
@@ -139,7 +129,7 @@ for table_name, table_info in adventureworks_tables_info.items():
             bronze_path=bronze_path, 
             schema_name=table_info['schema_name'], 
             table_name=table_name,
-            comparative_keys=table_info['comparative_keys'],
+            primary_keys=table_info['primary_keys'],
         )
 
         # Creating the table in unity catalog
