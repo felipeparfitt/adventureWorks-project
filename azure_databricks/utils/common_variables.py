@@ -17,7 +17,7 @@ from pyspark.sql.types import (
     DateType
 )
 from delta.tables import DeltaTable
-from deep_translator import GoogleTranslator
+from concurrent.futures import ThreadPoolExecutor
 
 # COMMAND ----------
 
@@ -39,213 +39,214 @@ gold_path = spark.sql(f"DESCRIBE EXTERNAL LOCATION {project_name}_gold_{env}").s
 
 # COMMAND ----------
 
-# Tables info with primary keys
+# Dictionary containing all table information
 adventureworks_tables_info = {
     "SalesOrderHeader": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/SalesOrderHeader",
+        "notebook_path": "./Silver_Sales_SalesOrderHeader",
         "primary_keys": ["SalesOrderID"]
     },
     "SalesOrderDetail": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/SalesOrderDetail",
+        "notebook_path": "./Silver_Sales_SalesOrderDetail",
         "primary_keys": ["SalesOrderID", "SalesOrderDetailID"]
     },
     "Customer": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/Customer",
+        "notebook_path": "./Silver_Sales_Customer",
         "primary_keys": ["CustomerID"]
     },
     "SpecialOffer": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/SpecialOffer",
+        "notebook_path": "./Silver_Sales_SpecialOffer",
         "primary_keys": ["SpecialOfferID"]
     },
     "Currency": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/Currency",
+        "notebook_path": "./Silver_Sales_Currency",
         "primary_keys": ["CurrencyCode"]
     },
     "SalesTerritory": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/SalesTerritory",
+        "notebook_path": "./Silver_Sales_SalesTerritory",
         "primary_keys": ["TerritoryID"]
     },
     "SalesReason": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/SalesReason",
+        "notebook_path": "./Silver_Sales_SalesReason",
         "primary_keys": ["SalesReasonID"]
     },
     "vPersonDemographics": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/vPersonDemographics",
+        "notebook_path": "./Silver_Sales_vPersonDemographics",
         "primary_keys": ["BusinessEntityID"]
     },
     "CountryRegionCurrency": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/CountryRegionCurrency",
+        "notebook_path": "./Silver_Sales_CountryRegionCurrency",
         "primary_keys": ["CountryRegionCode", "CurrencyCode"]
     },
     "SalesOrderHeaderSalesReason": {
         "active": True,
         "schema_name": "Sales",
-        "notebook_path": "/path/to/notebook/SalesOrderHeaderSalesReason",
+        "notebook_path": "./Silver_Sales_SalesOrderHeaderSalesReason",
         "primary_keys": ["SalesOrderID", "SalesReasonID"]
     },
     "Address": {
         "active": True,
         "schema_name": "Person",
-        "notebook_path": "/path/to/notebook/Address",
+        "notebook_path": "./Silver_Person_Address",
         "primary_keys": ["AddressID"]
     },
     "EmailAddress": {
         "active": True,
         "schema_name": "Person",
-        "notebook_path": "/path/to/notebook/EmailAddress",
+        "notebook_path": "./Silver_Person_EmailAddress",
         "primary_keys": ["EmailAddressID"]
     },
     "PersonPhone": {
         "active": True,
         "schema_name": "Person",
-        "notebook_path": "/path/to/notebook/PersonPhone",
+        "notebook_path": "./Silver_Person_PersonPhone",
         "primary_keys": ["BusinessEntityID", "PhoneNumber", "PhoneNumberTypeID"]
     },
     "StateProvince": {
         "active": True,
         "schema_name": "Person",
-        "notebook_path": "/path/to/notebook/StateProvince",
+        "notebook_path": "./Silver_Person_StateProvince",
         "primary_keys": ["StateProvinceID"]
     },
     "CountryRegion": {
         "active": True,
         "schema_name": "Person",
-        "notebook_path": "/path/to/notebook/CountryRegion",
+        "notebook_path": "./Silver_Person_CountryRegion",
         "primary_keys": ["CountryRegionCode"]
     },
     "Person": {
         "active": True,
         "schema_name": "Person",
-        "notebook_path": "/path/to/notebook/CountryRegion",
+        "notebook_path": "./Silver_Person_Person",
         "primary_keys": ["BusinessEntityID"]
     },
     "BusinessEntityAddress": {
         "active": True,
         "schema_name": "Person",
-        "notebook_path": "/path/to/notebook/CountryRegion",
+        "notebook_path": "./Silver_Person_BusinessEntityAddress",
         "primary_keys": ["BusinessEntityID", "AddressID", "AddressTypeID"]
     },
     "ProductCostHistory": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductCostHistory",
+        "notebook_path": "./Silver_Production_ProductCostHistory",
         "primary_keys": ["ProductID", "StartDate"]
     },
     "ProductListPriceHistory": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductListPriceHistory",
+        "notebook_path": "./Silver_Production_ProductListPriceHistory",
         "primary_keys": ["ProductID", "StartDate"]
     },
     "Product": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/Product",
+        "notebook_path": "./Silver_Production_Product",
         "primary_keys": ["ProductID"]
     },
     "ProductSubcategory": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductSubcategory",
+        "notebook_path": "./Silver_Production_ProductSubcategory",
         "primary_keys": ["ProductSubcategoryID"]
     },
     "ProductModel": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductModel",
+        "notebook_path": "./Silver_Production_ProductModel",
         "primary_keys": ["ProductModelID"]
     },
     "ProductDescription": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductDescription",
+        "notebook_path": "./Silver_Production_ProductDescription",
         "primary_keys": ["ProductDescriptionID"]
     },
     "ProductCategory": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductDescription",
+        "notebook_path": "./Silver_Production_ProductCategory",
         "primary_keys": ["ProductCategoryID"]
     },
     "UnitMeasure": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductDescription",
+        "notebook_path": "./Silver_Production_UnitMeasure",
         "primary_keys": ["UnitMeasureCode"]
     },
     "ProductModelProductDescriptionCulture": {
         "active": True,
         "schema_name": "Production",
-        "notebook_path": "/path/to/notebook/ProductDescription",
+        "notebook_path": "./Silver_Production_ProductModelProductDescriptionCulture",
         "primary_keys": ["ProductModelID", "ProductDescriptionID", "CultureID"]
     }
 }
 
+# Dictionary containing information about Internet Sales data warehouse tables
 dw_adventureworks_tables_info = {
     "DimProduct": {
         "active": True,
         "source_tables": ['Product', 'ProductModel', 'ProductDescription',                          'ProductModelProductDescriptionCulture', 'ProductCostHistory', 'ProductListPriceHistory'],
-        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "notebook_path": './Gold_DimProduct',
         "primary_keys": ['ProductAlternateKey', 'StartDate']
     },
     "DimCurrency": {
         "active": True,
         "source_tables": ['Currency'],
-        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "notebook_path": './Gold_DimCurrency',
         "primary_keys": ['CurrencyAlternateKey']
     },
     "DimPromotion": {
         "active": True,
         "source_tables": ['SpecialOffer'],
-        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "notebook_path": './Gold_DimPromotion',
         "primary_keys": ['PromotionAlternateKey']
     },
     "DimCustomer": {
         "active": True,
         "source_tables": ['Customer', 'Person', 'PersonPhone', 'EmailAddress', 'BusinessEntityAddress', 'Address', 'vPersonDemographics'],
-        "notebook_path": 'azure_databricks/gold/Gold_DimProduct',
+        "notebook_path": './Gold_DimCustomer',
         "primary_keys": ['CustomerKey']
     },
     "DimSalesTerritory": {
         "active": True,
         "source_tables": ['SalesTerritory', 'CountryRegion'],
-        "notebook_path": 'azure_databricks/gold/Gold_DimSalesTerritory',
+        "notebook_path": './Gold_DimSalesTerritory',
         "primary_keys": ['SalesTerritoryAlternateKey']
     },
     "DimSalesReason": {
         "active": True,
         "source_tables": ['SalesReason'],
-        "notebook_path": 'azure_databricks/gold/Gold_DimSalesReason',
+        "notebook_path": './Gold_DimSalesReason',
         "primary_keys": ['SalesReasonAlternateKey']
     },
     "FactInternetSales": {
         "active": True,
         "source_tables": ['Product','SalesOrderDetail', 'SalesOrderHeader', 'SalesTerritory', 'CountryRegionCurrency'],
-        "notebook_path": 'azure_databricks/gold/FactInternetSales',
+        "notebook_path": './Gold_FactInternetSales',
         "primary_keys": ['SalesOrderLineNumber', 'SalesOrderLineNumber']
     },
     "FactInternetSalesReason": {
         "active": True,
         "source_tables": ['SalesOrderHeaderSalesReason'],
-        "notebook_path": 'azure_databricks/gold/FactInternetSalesReason',
+        "notebook_path": './Gold_FactInternetSalesReason',
         "primary_keys": ['SalesOrderNumber', 'SalesOrderLineNumber', 'SalesReasonKey']
     }
 }

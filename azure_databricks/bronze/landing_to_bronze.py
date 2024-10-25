@@ -100,37 +100,77 @@ def write_bronze_data_batch(
     )
     print("Success !!")
     print("*******************************")
+    
+# Reading/Writing all tables to bronze layer:
+def landing_to_bronze(
+    landing_path: str,
+    bronze_path: str,
+    catalog_name: str,
+    schema_name: str,
+    table_name: str,
+    primary_keys: dict,
+) -> None:
+    """
+    Reads data from the landing zone and writes it to the bronze layer, creating an external table in Unity Catalog.
+
+    Parameters:
+        landing_path (str): The path to the landing zone directory.
+        bronze_path (str): The destination path in the bronze layer.
+        catalog_name (str): The Unity Catalog name where the external table will be created.
+        schema_name (str): The schema name for the table in Unity Catalog.
+        table_name (str): The name of the table being processed.
+        primary_keys (dict): A dictionary containing the primary keys of the table for handling data consistency.
+
+    Returns:
+        None
+    """
+    # Reading the table from landing zone
+    df_batch = read_landing_data_batch(
+        landing_path=landing_path,
+        schema_name=schema_name, 
+        table_name=table_name
+    )
+
+    # Writing the table to bronze layer
+    write_bronze_data_batch(
+        df=df_batch, 
+        bronze_path=bronze_path, 
+        schema_name=schema_name, 
+        table_name=table_name,
+        primary_keys=primary_keys,
+    )
+
+    # Creating the table in unity catalog
+    spark.sql(f"""
+        CREATE EXTERNAL TABLE IF NOT EXISTS {catalog_name}.bronze.{schema_name}_{table_name}
+        USING DELTA 
+        LOCATION '{bronze_path}/{schema_name}/{table_name}'
+        """
+    )
 
 # COMMAND ----------
 
 # MAGIC %md 
-# MAGIC ### Reading/Writing all tables to bronze layer:
+# MAGIC ### Running landing_to_bronze Function in Parallel 
 
 # COMMAND ----------
 
-# Batch Mode
-for table_name, table_info in adventureworks_tables_info.items():
+# Function to run landing_to_bronze
+def run_landing_to_bronze(table_name, table_info):
     if table_info['active']:
-        # Reading the table from landing zone
-        df_batch = read_landing_data_batch(
+        landing_to_bronze(
             landing_path=landing_path,
-            schema_name=table_info['schema_name'], 
-            table_name=table_name
-        )
-
-        # Writing the table to bronze layer
-        write_bronze_data_batch(
-            df=df_batch, 
-            bronze_path=bronze_path, 
-            schema_name=table_info['schema_name'], 
+            bronze_path=bronze_path,
+            catalog_name=catalog_name,
+            schema_name=table_info['schema_name'],
             table_name=table_name,
             primary_keys=table_info['primary_keys'],
         )
 
-        # Creating the table in unity catalog
-        spark.sql(f"""
-            CREATE EXTERNAL TABLE IF NOT EXISTS {catalog_name}.bronze.{table_info['schema_name']}_{table_name}
-            USING DELTA 
-            LOCATION '{bronze_path}/{table_info["schema_name"]}/{table_name}'
-            """
-        )
+# Run landing_to_bronze in parallel
+with ThreadPoolExecutor() as executor:
+    futures = [
+        executor.submit(run_landing_to_bronze, table_name, table_info)
+        for table_name, table_info in adventureworks_tables_info.items()
+    ]
+    results = [future.result() for future in futures]
