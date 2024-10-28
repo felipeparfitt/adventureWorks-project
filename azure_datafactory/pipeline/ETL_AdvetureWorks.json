@@ -110,6 +110,66 @@
 					"referenceName": "LS_ADB_advetureWorks",
 					"type": "LinkedServiceReference"
 				}
+			},
+			{
+				"name": "Bronze To Silver",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Landing To Bronze",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/live/silver/run_bronze_to_silver",
+					"baseParameters": {
+						"env": "dev"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ADB_advetureWorks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Silver To Gold",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Bronze To Silver",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/live/gold/run_silver_to_gold",
+					"baseParameters": {
+						"env": "dev"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ADB_advetureWorks",
+					"type": "LinkedServiceReference"
+				}
 			}
 		],
 		"parameters": {
