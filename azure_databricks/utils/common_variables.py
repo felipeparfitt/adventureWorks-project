@@ -141,7 +141,7 @@ adventureworks_tables_info = {
         "active": True,
         "schema_name": "Person",
         "notebook_path": "./Silver_Person_BusinessEntityAddress",
-        "primary_keys": ["BusinessEntityID", "AddressID", "AddressTypeID"]
+        "primary_keys": ["BusinessEntityID"]
     },
     "ProductCostHistory": {
         "active": True,
