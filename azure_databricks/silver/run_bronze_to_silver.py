@@ -19,7 +19,7 @@ def run_notebook(notebook_path):
 
 with ThreadPoolExecutor() as executor:
     futures = []
-    for table_name, table_info in adventureworks_tables_info2.items():
+    for table_name, table_info in adventureworks_tables_info.items():
         if table_info['active']:
             futures.extend([executor.submit(run_notebook, table_info['notebook_path'])])
 results = [future.result() for future in futures]
