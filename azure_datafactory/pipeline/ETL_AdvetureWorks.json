@@ -80,6 +80,96 @@
 						}
 					]
 				}
+			},
+			{
+				"name": "Landing To Bronze",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "For Each Schema Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/live/bronze/landing_to_bronze",
+					"baseParameters": {
+						"env": "dev"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ADB_advetureWorks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Bronze To Silver",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Landing To Bronze",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/live/silver/run_bronze_to_silver",
+					"baseParameters": {
+						"env": "dev"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ADB_advetureWorks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Silver To Gold",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Bronze To Silver",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/live/gold/run_silver_to_gold",
+					"baseParameters": {
+						"env": "dev"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_ADB_advetureWorks",
+					"type": "LinkedServiceReference"
+				}
 			}
 		],
 		"parameters": {
@@ -115,6 +205,18 @@
 						"table_name": "SalesReason"
 					},
 					{
+						"schema_name": "Sales",
+						"table_name": "vPersonDemographics"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "CountryRegionCurrency"
+					},
+					{
+						"schema_name": "Sales",
+						"table_name": "SalesOrderHeaderSalesReason"
+					},
+					{
 						"schema_name": "Person",
 						"table_name": "Address"
 					},
@@ -135,8 +237,20 @@
 						"table_name": "CountryRegion"
 					},
 					{
+						"schema_name": "Person",
+						"table_name": "Person"
+					},
+					{
+						"schema_name": "Person",
+						"table_name": "BusinessEntityAddress"
+					},
+					{
 						"schema_name": "Production",
 						"table_name": "ProductCostHistory"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductListPriceHistory"
 					},
 					{
 						"schema_name": "Production",
@@ -153,6 +267,18 @@
 					{
 						"schema_name": "Production",
 						"table_name": "ProductDescription"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductCategory"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "UnitMeasure"
+					},
+					{
+						"schema_name": "Production",
+						"table_name": "ProductModelProductDescriptionCulture"
 					}
 				]
 			}
