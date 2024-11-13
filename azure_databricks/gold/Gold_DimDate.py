@@ -123,7 +123,7 @@ df_DimDate = (
         .withColumn('DayNumberOfMonth', F.dayofmonth('FullDateAlternateKey').cast(IntegerType()))
         .withColumn('DayNumberOfYear', F.dayofyear('FullDateAlternateKey').cast(IntegerType()))
         .withColumn('WeekNumberOfYear', F.weekofyear('FullDateAlternateKey').cast(IntegerType()))
-        .withColumn('EnglishMonthName', F.date_format('FullDateAlternateKey', 'LLLL').cast(StringType()))
+        .withColumn('EnglishMonthName', F.date_format('FullDateAlternateKey', 'MMMM').cast(StringType()))
         .withColumn('SpanishMonthName', udf_get_language_month(F.col('EnglishMonthName'), F.lit("Spanish")))
         .withColumn('FrenchMonthName', udf_get_language_month(F.col('EnglishMonthName'), F.lit("French")))
         .withColumn('MonthNumberOfYear', F.month('FullDateAlternateKey').cast(IntegerType()))
