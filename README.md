@@ -1,6 +1,10 @@
 # End to End Azure Data Engineering Project: Building an Internet Sales Data Warehouse
 
-![Azure Archicture](./diagrams/azure_architecture.drawio.png)
+<p align="center">
+<img src="./diagrams/azure_architecture.drawio.png" alt="azure_architecture">
+</p>
+
+<!-- ![Azure Archicture](./diagrams/azure_architecture.drawio.png) -->
 
 ## Project Objective
 
@@ -8,7 +12,11 @@ The objective of this project is to recreate the Internet Sales Data Warehouse b
 
 The layout of the Internet Sales Data Warehouse, with its dimensions and fact tables, taken from the [Dataeto](https://dataedo.com/samples/html/Data_warehouse/doc/AdventureWorksDW_4/modules/Internet_Sales_101/module.html), can be seen in the figure below.
 
-![Azure Archicture](./diagrams/InternetSalesDW.png)
+<p align="center">
+  <img src="./diagrams/InternetSalesDW.png" alt="InternetSalesDW">
+</p>
+
+<!-- ![Azure Archicture](./diagrams/InternetSalesDW.png) -->
 
 ## Project Assumptions
 
@@ -51,19 +59,12 @@ For the development of the project, the following assumptions were made:
 + **Microsoft Power BI**: Powers data visualization and reporting, transforming the insights from the gold layer of the Internet Sales Data Warehouse into actionable business intelligence.
 
 ## Project Development
-11
 
 <p align="center">
-<img src="./diagrams/adf_pipeline.png" alt="Descrição da Imagem" width="1000" height="auto">
+  <img src="./diagrams/adf_pipeline.png" alt="adf_pipeline" width="1000" height="auto">
 </p>
 
-22
-
-<img src="./diagrams/adf_pipeline.png" alt="Azure Architecture" width="1000" height="auto">
-
-33
-
-![Azure Archicture](./diagrams/adf_pipeline.png)
+<!--![Azure Archicture](./diagrams/adf_pipeline.png)-->
 
 ### 1) Initial Stage
 The project begins in the on-premises SQL Server environment, where the AdventureWorks 2022 database operates as an OLTP system. The data flow is orchestrated by Azure Data Factory, starting with the extraction of the tables needed to build the Internet Sales Data Warehouse. This process is automated through the Copy Data activity, which, within a ForEach loop, extracts all relevant tables from SQL Server and stores them in Parquet format in the landing zone of Azure Data Lake Storage (ADLS).
@@ -82,14 +83,23 @@ The gold layer represents the Data Warehouse. In this phase, tables from the sil
 
 An example of a table flow can be seen in the image below:
 
-![Data lineage](./diagrams/Data Lineage Dim Curremcy.png)
+
+<p align="center">
+  <img src="./diagrams/data_lineage_dim_currency.png" alt="data_lineage_dim_currency" width="1100" height="auto">
+</p>
+
+<!-- ![Data lineage](./diagrams/Data Lineage Dim Curremcy.png) -->
 
 ### 3) Analysis and Decision Making With Power BI
 Power BI is used to create interactive dashboards, providing valuable insights into the company’s sales. These insights enable managers to make informed decisions to optimize operational and strategic outcomes.
 
 The final dashboard can be seen below:
 
-<img class="img" src="./diagrams/InternetSalesDW_BI.jpg" alt="Azure Architecture" width="1000" height="auto">
+<p align="center">
+  <img src="./diagrams/InternetSalesDW_BI.jpg" alt="InternetSalesDW_BI" width="1000" height="auto">
+</p>
+
+<!-- <img class="img" src="./diagrams/InternetSalesDW_BI.jpg" alt="Azuredsd" width="1000" height="auto"> -->
 
 ### 4) Additional Information
 + Transformations: All data transformation processes occur in Azure Databricks, leveraging Apache Spark to efficiently process large volumes of data.
