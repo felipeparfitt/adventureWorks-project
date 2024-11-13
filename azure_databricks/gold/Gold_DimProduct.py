@@ -122,7 +122,6 @@ df_ProductListPriceHistory = dict_df_source_silver_tables['df_ProductListPriceHi
 
 # COMMAND ----------
 
-# Joining ProductModelProductDescriptionCulture and ProductDescription tables and pivoting the result
 df_ppmpdc_ppd = (
     df_ProductModelProductDescriptionCulture.alias('ppmpdc')
         .join(
@@ -139,8 +138,11 @@ df_ppch_pplph = df_ProductCostHistory.alias('ppch').join(
     other=df_ProductListPriceHistory.alias('ppch_pplph'), 
     on=(
         (F.col('ppch.ProductID') == F.col('ppch_pplph.ProductID')) &
-        (F.col('ppch.StartDate') == F.col('ppch_pplph.StartDate')) &
-        (F.col('ppch.EndDate') == F.col('ppch_pplph.EndDate'))
+        (F.col('ppch.StartDate') == F.col('ppch_pplph.StartDate')) & (
+         (F.col('ppch.EndDate') == F.col('ppch_pplph.EndDate')) |
+          (F.col('ppch.EndDate').isNull() & F.col('ppch_pplph.EndDate').isNull()) 
+        )
+       
     ),
     how='left'
 ).select(

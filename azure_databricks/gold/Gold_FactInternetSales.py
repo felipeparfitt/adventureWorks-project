@@ -48,6 +48,10 @@ gold_target_table_name = f"{catalog_name}.gold.{table_name}"
 
 # COMMAND ----------
 
+spark.sql(f"drop table if exists {gold_target_table_name}")
+
+# COMMAND ----------
+
 # Creating the FactInternetSales table in gold layer
 spark.sql(f"""
     CREATE EXTERNAL TABLE IF NOT EXISTS {gold_target_table_name} (
@@ -98,14 +102,14 @@ spark.sql(f"""
 # Reading all source tables from silver layer and storing them in a dictionary
 dict_df_source_silver_tables = reading_all_silver_tables(silver_source_table_names)
 # Organizing the variables names
-df_Product = dict_df_source_silver_tables['df_Product'].filter(F.col('SellEndDate').isNull())
+df_Product = dict_df_source_silver_tables['df_Product']
 df_SalesOrderDetail = dict_df_source_silver_tables['df_SalesOrderDetail']
 df_SalesOrderHeader = dict_df_source_silver_tables['df_SalesOrderHeader'].filter(F.col('OnlineOrderFlag') == F.lit(True))  # In order to reproduce AdvetureWorks DW (only online orders)
 df_SalesTerritory = dict_df_source_silver_tables['df_SalesTerritory']
 df_CountryRegionCurrency = dict_df_source_silver_tables['df_CountryRegionCurrency'].dropDuplicates(['CountryRegionCode'])
 
 # Reading all gold tables needed
-df_DimProduct = spark.read.table(f"{catalog_name}.gold.DimProduct").filter(F.col('EndDate').isNull())
+df_DimProduct = spark.read.table(f"{catalog_name}.gold.DimProduct")
 df_DimPromotion = spark.read.table(f"{catalog_name}.gold.DimPromotion")
 df_DimSalesTerritory = spark.read.table(f"{catalog_name}.gold.DimSalesTerritory")
 df_DimCurrency = spark.read.table(f"{catalog_name}.gold.DimCurrency")
@@ -133,7 +137,10 @@ df_FactInternetSales = (
         how='left'
     ).join(
         other=df_DimProduct.alias('dprod'),
-        on=F.col('pp.ProductNumber') == F.col('dprod.ProductAlternateKey'),
+        on=(
+            (F.col('pp.ProductNumber') == F.col('dprod.ProductAlternateKey')) &
+            (F.col('ssoh.OrderDate').between(F.col('dprod.StartDate'), F.when(F.col('dprod.EndDate').isNull(), F.current_date()).otherwise(F.col('dprod.EndDate'))))
+        ),
         how='left'
     ).join(
         other=df_DimPromotion.alias('dprom'),
@@ -174,7 +181,7 @@ df_FactInternetSales = (
         (F.col('ssod.UnitPriceDiscount')*F.col('ssod.UnitPrice')).alias('DiscountAmount'),
         F.col('dprod.StandardCost').alias('ProductStandardCost'),
         (F.col('ssod.OrderQty') * F.col('dprod.StandardCost')).alias('TotalProductCost'),
-        F.col('dprod.ListPrice').alias('SalesAmount'),
+        (F.col('ssod.LineTotal') - (F.col('ssod.UnitPriceDiscount')*F.col('ssod.UnitPrice'))).alias('SalesAmount'),
         F.col('ssoh.TaxAmt').alias('TaxAmt'),
         F.col('ssoh.Freight').alias('Freight'),
         F.col('ssod.CarrierTrackingNumber').alias('CarrierTrackingNumber'),
